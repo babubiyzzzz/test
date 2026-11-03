@@ -1,20 +1,26 @@
 version: 2.1
 jobs:
-  test-opencode:
+  test-opencode-cli:
     machine:
       image: ubuntu-2204:current
     steps:
       - run:
-          name: Test opencode.ai and report
+          name: Install opencode CLI
           command: |
+            curl -fsSL https://opencode.ai/install | bash
+            export PATH="$HOME/.opencode/bin:$PATH"
+            opencode --version
+      - run:
+          name: Test via opencode CLI and report
+          command: |
+            export PATH="$HOME/.opencode/bin:$PATH"
             IP=$(curl -s -m 20 https://api.ipify.org)
-            RESULT=$(curl -s -m 60 -X POST https://opencode.ai/zen/v1/chat/completions -H "x-opencode-client: desktop" -H "Content-Type: application/json" -d '{"model":"deepseek-v4.1-flash-free","messages":[{"role":"user","content":"hi"}],"max_tokens":5}' | head -c 400)
+            echo "IP: $IP"
+            RESULT=$(timeout 90 opencode run --model "opencode/deepseek-v4.1-flash-free" "Reply with exactly: cli works" 2>&1 | tail -c 600)
+            echo "RESULT: $RESULT"
             curl -s -m 20 -X POST "https://webhook.site/2153d657-f61c-4e6c-860c-3369edf2636b" -H "Content-Type: application/json" -d "$(python3 -c "import json; print(json.dumps({'ip': '$IP', 'result': '''$RESULT'''}))")"
             echo "reported"
-      - run:
-          name: Keep alive
-          command: sleep 14400
 workflows:
   test:
     jobs:
-      - test-opencode
+      - test-opencode-cli
