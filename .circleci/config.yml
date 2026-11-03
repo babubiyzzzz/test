@@ -1,26 +1,17 @@
 version: 2.1
 jobs:
-  test-opencode-cli:
+  cli-test:
     machine:
       image: ubuntu-2204:current
     steps:
-      - run:
-          name: Install opencode CLI
-          command: |
-            curl -fsSL https://opencode.ai/install | bash
-            export PATH="$HOME/.opencode/bin:$PATH"
-            opencode --version
-      - run:
-          name: Test via opencode CLI and report
-          command: |
-            export PATH="$HOME/.opencode/bin:$PATH"
-            IP=$(curl -s -m 20 https://api.ipify.org)
-            echo "IP: $IP"
-            RESULT=$(timeout 90 opencode run --model "opencode/deepseek-v4.1-flash-free" "Reply with exactly: cli works" 2>&1 | tail -c 600)
-            echo "RESULT: $RESULT"
-            curl -s -m 20 -X POST "https://webhook.site/2153d657-f61c-4e6c-860c-3369edf2636b" -H "Content-Type: application/json" -d "$(python3 -c "import json; print(json.dumps({'ip': '$IP', 'result': '''$RESULT'''}))")"
-            echo "reported"
+      - run: curl -fsSL https://opencode.ai/install | bash
+      - run: |
+          export PATH="$HOME/.opencode/bin:$PATH"
+          IP=$(curl -s -m 20 https://api.ipify.org)
+          echo "IP=$IP"
+          timeout 90 opencode run --model "opencode/deepseek-v4.1-flash-free" "Say hi" 2>&1 | tail -c 500
+          echo "EXIT:$?"
 workflows:
   test:
     jobs:
-      - test-opencode-cli
+      - cli-test
